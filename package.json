@@ -1,0 +1,33 @@
+{
+  "name": "obsidian-pear-sync",
+  "version": "0.1.0",
+  "description": "Peer-to-peer vault sync for Obsidian — no cloud, no server, no subscription.",
+  "author": "RbMo7",
+  "license": "MIT",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production",
+    "tsc": "tsc --noEmit",
+    "deploy": "npm run build && echo 'Build done. Reload Obsidian (Cmd+R) to pick up changes.'",
+    "link": "ln -sf $PWD $HOME/Documents/Basecamp/.obsidian/plugins/obsidian-pear-sync && echo 'Linked. Run npm run build then reload Obsidian.'",
+    "test:ipc": "node test/ipc-test.js",
+    "test:p2p": "node test/p2p-test.js",
+    "test:protocol": "node test/protocol-test-source.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "builtin-modules": "^5.3.0",
+    "esbuild": "^0.24.0",
+    "obsidian": "^1.7.0",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "b4a": "^1.6.0",
+    "bare-sidecar": "^0.5.2",
+    "corestore": "^6.0.0",
+    "hyperdrive": "^11.0.0",
+    "hyperswarm": "^4.0.0",
+    "sodium-universal": "^4.0.0"
+  }
+}

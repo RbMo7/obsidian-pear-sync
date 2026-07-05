@@ -1,0 +1,10 @@
+{
+  "id": "obsidian-pear-sync",
+  "name": "Pear Sync",
+  "version": "0.1.0",
+  "minAppVersion": "1.6.7",
+  "description": "Peer-to-peer vault sync over encrypted P2P connections — no cloud, no server, no subscription.",
+  "author": "RbMo7",
+  "authorUrl": "https://github.com/RbMo7",
+  "isDesktopOnly": true
+}
