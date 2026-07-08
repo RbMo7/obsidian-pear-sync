@@ -98,7 +98,7 @@ export default class PearSyncPlugin extends Plugin {
       this.state.isStarting = true;
       this.ui.updateStatusBar();
 
-      await this.bridge.start(this.pluginDir, this.settings.seedPhrase);
+      await this.bridge.start(this.pluginDir, this.settings.seedPhrase, this.settings.remoteKey || undefined);
 
       this.state.isStarting = false;
       this.ui.updateStatusBar();

@@ -1,5 +1,5 @@
 export type WorkerCommand =
-  | { type: "init"; seedPhrase: string; storePath: string }
+  | { type: "init"; seedPhrase: string; storePath: string; remoteKey?: string }
   | { type: "upsert-file"; path: string; data: string }
   | { type: "delete-file"; path: string }
   | { type: "get-invite" }

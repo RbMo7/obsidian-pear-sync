@@ -1,14 +1,12 @@
 import { VaultDrive } from './drive.mjs'
 import { VaultSwarm } from './swarm.mjs'
-import { generateInvite } from './pairing.mjs'
+import { generateInvite, parseInvite } from './pairing.mjs'
 import b4a from 'b4a'
 
 let drive = null
 let swarm = null
 let buffer = ''
 
-// Prevent event-loop exit — Bare exits when nothing is pending.
-// The IPC listener should suffice, but a timer guarantees it.
 const keepalive = setInterval(() => {}, 30000)
 
 function send(msg) {
@@ -21,35 +19,23 @@ async function handleMessage(msg) {
 
       case 'init': {
         const sodium = await import('sodium-universal')
-        const csk = sodium.default?.crypto_sign_seed_keypair ?? sodium.crypto_sign_seed_keypair
-        const pwhash = sodium.default?.crypto_pwhash ?? sodium.crypto_pwhash
         const cgh = sodium.default?.crypto_generichash ?? sodium.crypto_generichash
 
-        // Derive seed from mnemonic using libsodium's key derivation
-        // This ensures the same phrase generates the same keypair across all devices
-        const normalized = msg.seedPhrase.normalize('NFKC').trim()
-
-        // Generate 16-byte salt deterministically from 'pear-sync'
-        const saltHash = b4a.alloc(32)
-        cgh(saltHash, b4a.from('pear-sync', 'utf8'))
-        const salt = saltHash.slice(0, 16)
-
-        const seed = b4a.alloc(32)
-        pwhash(
-          seed,
-          b4a.from(normalized, 'utf8'),
-          salt,
-          2, // opslimit (moderate)
-          67108864, // memlimit (64MB)
-          sodium.default?.crypto_pwhash_ALG_DEFAULT ?? sodium.crypto_pwhash_ALG_DEFAULT
-        )
-
-        const publicKey = b4a.alloc(32)
-        const secretKey = b4a.alloc(64)
-        csk(publicKey, secretKey, seed)
+        // Derive 32-byte primaryKey from seed phrase via generic hash (BLAKE2b).
+        // Same phrase → same primaryKey → same corestore keypairs → same drive key on any device.
+        const primaryKey = b4a.alloc(32)
+        cgh(primaryKey, b4a.from(msg.seedPhrase.normalize('NFKC').trim(), 'utf8'))
 
         drive = new VaultDrive(msg.storePath)
-        await drive.init({ publicKey, secretKey })
+
+        if (msg.remoteKey) {
+          // Reader mode: joining another device's vault
+          const remoteKeyBuf = b4a.from(msg.remoteKey, 'hex')
+          await drive.initReader(remoteKeyBuf)
+        } else {
+          // Writer mode: this device owns the vault
+          await drive.initWriter(primaryKey)
+        }
 
         send({
           type: 'init-complete',
@@ -57,13 +43,11 @@ async function handleMessage(msg) {
           discoveryKey: b4a.toString(drive.discoveryKey, 'hex')
         })
 
-        // Swarm — start in background for peer discovery
-        // This also keeps the event loop alive (Bare exits on idle)
         swarm = new VaultSwarm(drive, (count) => {
           send({ type: 'peer-count', count })
         })
         swarm.start().catch(err => {
-          console.error('[pear-sync worker] swarm error:', err)
+          send({ type: 'error', message: 'swarm: ' + err.message })
         })
 
         break
@@ -71,8 +55,7 @@ async function handleMessage(msg) {
 
       case 'upsert-file': {
         if (!drive) { send({ type: 'error', message: 'Not initialised' }); break }
-        const dataBuf = b4a.from(msg.data, 'base64')
-        await drive.writeFile(msg.path, dataBuf)
+        await drive.writeFile(msg.path, b4a.from(msg.data, 'base64'))
         send({ type: 'upsert-done', path: msg.path })
         break
       }
@@ -91,6 +74,7 @@ async function handleMessage(msg) {
       }
 
       case 'shutdown': {
+        clearInterval(keepalive)
         if (swarm) await swarm.stop()
         if (drive) await drive.close()
         send({ type: 'shutdown-complete' })

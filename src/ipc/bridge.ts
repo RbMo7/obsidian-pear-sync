@@ -72,7 +72,7 @@ export class WorkerBridge {
   /**
    * Spawn the Bare worker. Sends init command once worker is ready.
    */
-  async start(pluginDir: string, seedPhrase: string): Promise<void> {
+  async start(pluginDir: string, seedPhrase: string, remoteKey?: string): Promise<void> {
     if (this.process) throw new Error("Worker already running");
 
     const bareBinary = this.resolveBareBinary(pluginDir);
@@ -147,7 +147,7 @@ export class WorkerBridge {
     const initDone = new Promise<void>((resolve) => {
       this.initPromise = resolve;
     });
-    await this.sendCommand({ type: "init", seedPhrase, storePath });
+    await this.sendCommand({ type: "init", seedPhrase, storePath, ...(remoteKey ? { remoteKey } : {}) });
 
     // Timeout: if init doesn't complete in 15s, reject
     const timeout = setTimeout(() => {

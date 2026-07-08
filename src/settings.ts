@@ -1,10 +1,6 @@
 import { PluginSettingTab, Setting, App, Notice } from "obsidian";
 import PearSyncPlugin from "./main";
-import {
-  generateMnemonic,
-  normalizeMnemonic,
-  validateMnemonic,
-} from "./crypto/seed-phrase";
+import { generateMnemonic } from "./crypto/seed-phrase";
 
 export class PearSyncSettingTab extends PluginSettingTab {
   plugin: PearSyncPlugin;
@@ -100,40 +96,62 @@ export class PearSyncSettingTab extends PluginSettingTab {
       }
     };
 
-    // ── Import ──────────────────────────────────────────────────────
-    containerEl.createEl("h3", { text: "Import Identity" });
+    // ── Join another vault ──────────────────────────────────────────
+    containerEl.createEl("h3", { text: "Join Another Device's Vault" });
     containerEl.createEl("p", {
-      text: "Paste a 12-word phrase from another device to copy its vault identity.",
-      cls: "pear-sync-desc",
+      text: "Paste the pear-sync:... invite from the other device to replicate its vault here.",
     }).style.cssText = "font-size:12px;opacity:.7";
 
-    let importInput: HTMLInputElement;
+    const modeLabel = containerEl.createEl("p", {
+      text: this.plugin.settings.remoteKey
+        ? `Currently joining remote vault (key: ${this.plugin.settings.remoteKey.slice(0, 16)}...)`
+        : "Currently running as vault owner.",
+    });
+    modeLabel.style.cssText = "font-size:12px;font-weight:bold;margin:4px 0";
+
+    let joinInput: HTMLInputElement;
 
     new Setting(containerEl)
-      .setName("Import phrase")
+      .setName("Paste invite")
       .addText((text) => {
-        importInput = text.inputEl;
-        text.inputEl.placeholder = "Paste 12-word phrase...";
+        joinInput = text.inputEl;
+        joinInput.placeholder = "pear-sync:...";
+        joinInput.style.width = "100%";
       })
       .addButton((btn) =>
-        btn.setButtonText("Import").onClick(async () => {
-          const raw = importInput?.value || "";
-          const phrase = normalizeMnemonic(raw);
-          if (phrase.split(/\s+/).length !== 12) {
-            new Notice("Enter exactly 12 words.");
+        btn.setButtonText("Join").onClick(async () => {
+          const raw = joinInput?.value?.trim() || "";
+          if (!raw.startsWith("pear-sync:")) {
+            new Notice("Invalid invite — must start with pear-sync:");
             return;
           }
-          if (!validateMnemonic(phrase)) {
-            new Notice("Invalid phrase — check spelling.");
+          const hex = raw.slice("pear-sync:".length);
+          if (!/^[0-9a-f]{64}$/i.test(hex)) {
+            new Notice("Invalid invite — bad key format.");
             return;
           }
-          this.plugin.settings.seedPhrase = phrase;
+          this.plugin.settings.remoteKey = hex.toLowerCase();
           await this.plugin.saveSettings();
           this.plugin.onSeedChanged().catch(console.error);
           this.display();
-          new Notice("Identity imported. Starting worker...");
+          new Notice("Joining remote vault. Connecting to peers...");
         })
       );
+
+    if (this.plugin.settings.remoteKey) {
+      new Setting(containerEl)
+        .setName("Leave remote vault")
+        .setDesc("Switch back to owning your own vault.")
+        .addButton((btn) =>
+          btn.setButtonText("Leave").onClick(async () => {
+            this.plugin.settings.remoteKey = "";
+            await this.plugin.saveSettings();
+            this.plugin.onSeedChanged().catch(console.error);
+            this.display();
+            new Notice("Left remote vault. Running as vault owner.");
+          })
+        );
+    }
 
     // ── Sync ────────────────────────────────────────────────────────
     containerEl.createEl("h3", { text: "Sync" });

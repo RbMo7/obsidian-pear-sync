@@ -1,10 +1,12 @@
 export interface PearSyncSettings {
   seedPhrase: string;
+  remoteKey: string;   // hex drive key — set when joining another device's vault
   lastSyncTimestamp: number;
 }
 
 export const DEFAULT_SETTINGS: PearSyncSettings = {
   seedPhrase: "",
+  remoteKey: "",
   lastSyncTimestamp: 0,
 };
 
