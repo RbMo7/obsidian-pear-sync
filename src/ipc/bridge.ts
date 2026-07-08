@@ -92,12 +92,13 @@ export class WorkerBridge {
       fs.chmodSync(bareBinary, 0o755);
     }
 
-    this.process = spawn(bareBinary, [workerPath], {
+    const proc = spawn(bareBinary, [workerPath], {
       stdio: ["pipe", "pipe", "pipe", "overlapped"],
     });
+    this.process = proc;
 
     // IPC is on fd 3 (exactly like bare-sidecar does internally)
-    const ipc = this.process.stdio[3] as Duplex | null;
+    const ipc = proc.stdio[3] as Duplex | null;
     if (!ipc) {
       throw new Error("IPC channel (fd 3) not available");
     }
@@ -133,10 +134,13 @@ export class WorkerBridge {
       console.error("[Pear Sync] Worker IPC error:", err);
     });
 
-    this.process.on("exit", (code) => {
+    proc.on("exit", (code) => {
       console.log("[Pear Sync] Worker exited with code", code);
-      this.process = null;
-      this.worker = null;
+      // Only clear if this is still the active process (guard against stale exit from old worker)
+      if (this.process === proc) {
+        this.process = null;
+        this.worker = null;
+      }
     });
 
     // Send init command and wait for init-complete response

@@ -66,7 +66,7 @@ export default class PearSyncPlugin extends Plugin {
     if (this.settings.seedPhrase) {
       await this.startWorker();
     } else {
-      console.log("[Pear Sync] No seed phrase set. Go to settings to generate or import one.");
+      new Notice("Pear Sync: No identity set. Open settings to generate one.");
     }
 
     console.log("[Pear Sync] Plugin loaded.");
@@ -120,8 +120,7 @@ export default class PearSyncPlugin extends Plugin {
         this.state.driveReady = true;
         this.ui.updateStatusBar();
         new Notice("Pear Sync ready — P2P drive initialised.");
-        // Pre-fetch the invite string so settings can display it
-        this.bridge.getInvite().catch(console.error);
+        if (this.bridge.running) this.bridge.getInvite().catch(console.error);
         break;
       case "peer-count":
         this.state.connectedPeers = event.count;
