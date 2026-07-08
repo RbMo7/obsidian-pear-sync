@@ -126,6 +126,8 @@ export default class PearSyncPlugin extends Plugin {
         this.state.driveReady = true;
         this.ui.updateStatusBar();
         new Notice("Pear Sync ready — P2P drive initialised.");
+        // Pre-fetch the invite string so settings can display it
+        this.bridge.getInvite().catch(console.error);
         break;
       case "peer-count":
         this.state.connectedPeers = event.count;

@@ -70,6 +70,36 @@ export class PearSyncSettingTab extends PluginSettingTab {
       new Notice("New vault identity generated.");
     };
 
+    // ── Pairing Invite ──────────────────────────────────────────────
+    containerEl.createEl("h3", { text: "Pairing Invite" });
+    containerEl.createEl("p", {
+      text: "Paste this into the mobile app to pair with this vault.",
+    }).style.cssText = "font-size:12px;opacity:.7";
+
+    const inviteStr =
+      this.plugin.state.currentInvite || "(worker not ready)";
+    const inviteArea = containerEl.createEl("textarea", {
+      cls: "pear-sync-invite",
+      text: inviteStr,
+    });
+    inviteArea.style.cssText =
+      "width:100%;height:40px;font-family:monospace;font-size:12px;color:#22c55e";
+    inviteArea.readOnly = true;
+
+    const copyInviteBtn = containerEl.createEl("button", {
+      text: "Copy invite",
+    });
+    copyInviteBtn.onclick = () => {
+      if (inviteStr && inviteStr !== "(worker not ready)") {
+        navigator.clipboard.writeText(inviteStr);
+        copyInviteBtn.textContent = "Copied!";
+        setTimeout(
+          () => (copyInviteBtn.textContent = "Copy invite"),
+          2000
+        );
+      }
+    };
+
     // ── Import ──────────────────────────────────────────────────────
     containerEl.createEl("h3", { text: "Import Identity" });
     containerEl.createEl("p", {
