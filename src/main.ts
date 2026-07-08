@@ -13,7 +13,6 @@ import { SyncQueue } from "./vault/sync-queue";
 import { SyncStatusUI } from "./ui/sync-status-icon";
 import { InviteModal } from "./ui/invite-modal";
 import * as path from "path";
-import { generateMnemonic } from "./crypto/seed-phrase";
 
 // ... (keep existing imports)
 
@@ -64,15 +63,10 @@ export default class PearSyncPlugin extends Plugin {
     this.ui.updateStatusBar();
     this.watcher.register();
 
-    // Auto-generate a seed phrase on first run
-    if (!this.settings.seedPhrase) {
-      this.settings.seedPhrase = generateMnemonic();
-      await this.saveSettings();
-      console.log("[Pear Sync] Generated seed phrase");
-    }
-
     if (this.settings.seedPhrase) {
       await this.startWorker();
+    } else {
+      console.log("[Pear Sync] No seed phrase set. Go to settings to generate or import one.");
     }
 
     console.log("[Pear Sync] Plugin loaded.");

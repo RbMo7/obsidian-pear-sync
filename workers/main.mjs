@@ -21,13 +21,14 @@ async function handleMessage(msg) {
 
       case 'init': {
         const sodium = await import('sodium-universal')
-        const cgh = sodium.default?.crypto_generichash ?? sodium.crypto_generichash
+        const crypto = await import('crypto')
         const csk = sodium.default?.crypto_sign_seed_keypair ?? sodium.crypto_sign_seed_keypair
 
-        // Derive a seed from the phrase, then generate a valid ed25519 key pair
-        const seedBuf = b4a.from(msg.seedPhrase, 'utf8')
-        const seed = b4a.alloc(32)
-        cgh(seed, seedBuf)
+        // Derive seed from mnemonic using PBKDF2 (BIP39 standard)
+        // This ensures the same phrase generates the same keypair across all devices
+        const normalized = msg.seedPhrase.normalize('NFKC').trim()
+        const salt = b4a.from('pear-sync\x00', 'utf8') // Fixed salt for consistency
+        const seed = crypto.pbkdf2Sync(normalized, salt, 2048, 32, 'sha512')
 
         const publicKey = b4a.alloc(32)
         const secretKey = b4a.alloc(64)

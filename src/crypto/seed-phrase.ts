@@ -18,7 +18,9 @@ const WORDS = 12;
  */
 export function generateMnemonic(): string {
   const entropy = randomBytes(16); // 128 bits
-  return entropyToMnemonic(entropy);
+  const phrase = entropyToMnemonic(entropy);
+  // Normalize to NFKC for consistent encoding across platforms
+  return normalizeMnemonic(phrase);
 }
 
 /**
